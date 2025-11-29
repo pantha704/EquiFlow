@@ -93,6 +93,17 @@ export default function DashboardPage() {
     fetchData();
   };
 
+  // Close modal on ESC key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowTokenizeModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
+
   const cancelListing = async (id: number) => {
     if (!account) return;
     try {
@@ -278,13 +289,11 @@ export default function DashboardPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 overflow-y-auto">
           <div className="min-h-screen px-4 text-center flex items-center justify-center">
             <div className="relative w-full max-w-md my-8">
-              <button
-                onClick={() => setShowTokenizeModal(false)}
-                className="absolute -top-12 right-0 text-gray-400 hover:text-white"
-              >
-                Close
-              </button>
-              <TokenizeForm account={account} onSuccess={handleTokenizeSuccess} />
+              <TokenizeForm
+                account={account}
+                onSuccess={handleTokenizeSuccess}
+                onClose={() => setShowTokenizeModal(false)}
+              />
             </div>
           </div>
         </div>

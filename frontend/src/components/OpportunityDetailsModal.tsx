@@ -1,15 +1,21 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { X, FileText, Download, ShieldCheck, Clock, DollarSign } from "lucide-react";
-import { generateLegalContract } from "@/utils/legalGenerator";
-import { toast } from "react-hot-toast";
+import { useEffect } from 'react';
 
-interface OpportunityDetailsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  opportunity: any;
-}
+// ... imports
 
 export default function OpportunityDetailsModal({ isOpen, onClose, opportunity }: OpportunityDetailsModalProps) {
+  // Close on ESC key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleEsc);
+    }
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !opportunity) return null;
 
   const handleDownloadContract = async () => {

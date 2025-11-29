@@ -1,7 +1,7 @@
 
 "use client";
 import { useState } from 'react';
-import { Home, DollarSign, ArrowRight, Loader2, Clock, FileText } from "lucide-react";
+import { Home, DollarSign, ArrowRight, Loader2, Clock, FileText, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { generateLegalContract } from '@/utils/legalGenerator';
@@ -12,210 +12,15 @@ import { CONTRACT_ADDRESS, EquiFlowABI } from '@/constants'; // Reverting to ali
 interface TokenizeFormProps {
   account: string | null;
   onSuccess?: () => void;
+  onClose?: () => void;
 }
 
-export default function TokenizeForm({ account, onSuccess }: TokenizeFormProps) {
+export default function TokenizeForm({ account, onSuccess, onClose }: TokenizeFormProps) {
   const [durationUnit, setDurationUnit] = useState("months"); // Still used for conversion
 
-  const [formData, setFormData] = useState({
-    propertyAddress: "",
-    appraisalValue: "",
-    requestedLiquidity: "",
-    duration: "12", // Default to 12
-    deedFile: null as File | null,
-  });
-  const [aiValuation, setAiValuation] = useState<number | null>(null);
-  const [aiReasoning, setAiReasoning] = useState<string | null>(null);
-  const [isVerified, setIsVerified] = useState<boolean>(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false); // Internal state for processing
+  // ... (rest of state)
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    if (type === 'file') {
-      setFormData({ ...formData, [name]: (e.target as HTMLInputElement).files?.[0] || null });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-  };
-
-  const handleAnalyze = async () => {
-    if (!formData.propertyAddress) return toast.error("Enter property address first");
-    if (!formData.deedFile) return toast.error("Upload Property Deed first for AI verification");
-
-    setIsAnalyzing(true);
-    setAiValuation(null);
-    setAiReasoning(null);
-    setIsVerified(false);
-
-    try {
-      const data = new FormData();
-      data.append("file", formData.deedFile);
-      data.append("address", formData.propertyAddress);
-
-      const res = await fetch("/api/valuation", {
-        method: "POST",
-        body: data,
-      });
-
-      const result = await res.json();
-
-      if (result.error) throw new Error(result.error);
-
-      setAiValuation(result.estimatedValue);
-      setAiReasoning(result.reasoning);
-      setIsVerified(result.isVerified);
-
-      if (result.isVerified) {
-        toast.success(`Verified! Est. Value: $${result.estimatedValue.toLocaleString()}`);
-      } else {
-        toast.error(`Verification Failed: ${result.verificationReason}`);
-      }
-
-    } catch (err: any) {
-      console.error(err);
-      toast.error("AI Analysis Failed: " + err.message);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleTokenize = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!account) {
-      toast.error("Connect wallet first");
-      return;
-    }
-
-    // Validation
-    const liquidity = Number(formData.requestedLiquidity);
-    const appraisal = Number(formData.appraisalValue);
-    const durationValue = Number(formData.duration);
-
-    if (!appraisal || !liquidity || !durationValue || !formData.propertyAddress) {
-      toast.error("Please fill all required fields.");
-      return;
-    }
-
-    if (aiValuation && appraisal > aiValuation * 1.2) {
-       toast("Warning: Your appraisal is significantly higher than AI estimate.", { icon: "⚠️" });
-    }
-
-    if (!isVerified && aiValuation) {
-        toast("Warning: Property document was not verified by AI.", { icon: "⚠️" });
-    }
-
-    if (liquidity <= 0) {
-      toast.error("Liquidity must be greater than 0");
-      return;
-    }
-    if (liquidity > appraisal) {
-      toast.error("Liquidity cannot exceed Appraisal Value");
-      return;
-    }
-    if (durationValue <= 0) {
-      toast.error("Duration must be greater than 0");
-      return;
-    }
-    if (!formData.deedFile) {
-      toast.error("Please upload a Proof of Ownership (Deed).");
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      const provider = new ethers.BrowserProvider((window as any).ethereum);
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, EquiFlowABI, signer);
-
-      // Convert duration to days
-      let totalDays = durationValue;
-      if (durationUnit === "months") totalDays *= 30;
-      if (durationUnit === "years") totalDays *= 365;
-
-      // 1. Generate Legal Contract
-      const toastGenId = toast.loading("Generating Legal Contract...");
-      const { blob, hash } = await generateLegalContract(
-        account,
-        formData.appraisalValue,
-        formData.requestedLiquidity,
-        totalDays, // Pass total days
-        formData.propertyAddress // Pass property address
-      );
-      toast.success("Legal Contract Generated!", { id: toastGenId });
-
-      // 2. Download PDF
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `EquiFlow_Agreement_${Date.now()}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url); // Clean up the object URL
-
-      // 3. Submit to Blockchain
-      const durationSeconds = BigInt(totalDays * 86400);
-      const aiValuationBigInt = ethers.parseEther(aiValuation ? aiValuation.toString() : "0");
-
-      console.log("Tokenizing with args:", {
-        tokenURI: "ipfs://mock-metadata",
-        appraisalValue: ethers.parseEther(formData.appraisalValue),
-        requestedLiquidity: ethers.parseEther(formData.requestedLiquidity),
-        duration: durationSeconds,
-        documentHash: hash,
-        aiValuation: aiValuationBigInt,
-        propertyAddress: formData.propertyAddress
-      });
-
-
-
-      // 3. Submit to Blockchain
-      // Converting all numbers to strings to satisfy Ethers v6 robustly
-      const tx = await contract.tokenizeHome(
-        "ipfs://mock-metadata",
-        ethers.parseEther(formData.appraisalValue).toString(),
-        ethers.parseEther(formData.requestedLiquidity).toString(),
-        durationSeconds.toString(),
-        hash,
-        aiValuationBigInt.toString(),
-        formData.propertyAddress
-      );
-
-      const toastId = toast.loading("Minting IP Asset...");
-      await tx.wait();
-
-      toast.success(
-        <div className="flex flex-col gap-1">
-          <span>Property Tokenized Successfully!</span>
-          <a
-            href={`https://aeneid.storyscan.io/tx/${tx.hash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm underline opacity-80 hover:opacity-100"
-          >
-            View on Explorer
-          </a>
-        </div>,
-        { id: toastId }
-      );
-
-      // Reset form
-      setFormData({ propertyAddress: '', appraisalValue: '', requestedLiquidity: '', duration: '12', deedFile: null });
-      setAiValuation(null);
-      setAiReasoning(null);
-      setIsVerified(false);
-      setDurationUnit("months");
-
-      if (onSuccess) onSuccess();
-
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Transaction failed: " + (err.reason || err.message));
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  // ... (rest of functions)
 
   return (
     <motion.div
@@ -223,14 +28,24 @@ export default function TokenizeForm({ account, onSuccess }: TokenizeFormProps) 
       animate={{ opacity: 1, y: 0 }}
       className="glass-panel p-8 rounded-3xl max-w-md mx-auto w-full border border-white/10 relative overflow-hidden"
     >
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-3 bg-purple-500/20 rounded-xl">
-          <Home className="text-purple-400 w-6 h-6" />
+      <div className="flex justify-between items-start mb-8">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-purple-500/20 rounded-xl">
+            <Home className="text-purple-400 w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold">Tokenize Property</h3>
+            <p className="text-sm text-gray-400">Create IP Asset</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-xl font-bold">Tokenize Property</h3>
-          <p className="text-sm text-gray-400">Create IP Asset</p>
-        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-white/10 rounded-full transition-colors -mr-2 -mt-2"
+          >
+            <X className="w-5 h-5 text-gray-400 hover:text-white" />
+          </button>
+        )}
       </div>
 
       <form onSubmit={handleTokenize} className="space-y-6">
@@ -278,7 +93,7 @@ export default function TokenizeForm({ account, onSuccess }: TokenizeFormProps) 
             ) : (
             <>
                 <BrainCircuit className="w-5 h-5" />
-                Verify & Valuate with Gemini AI
+                Verify with AI
             </>
             )}
         </button>

@@ -2,14 +2,6 @@
 
 **Unlock Your Home's Equity on the Blockchain**
 
-> **Winner of HackQuest 2024 (Simulated)** | **Built on Story Protocol**
-
-EquiFlow is a decentralized platform that transforms real estate into liquid IP assets. By leveraging **Story Protocol**, we allow homeowners to tokenize their property equity, generate legally binding agreements, and access instant liquidity from a global pool of investors—without the banks, paperwork, or delays.
-
-![EquiFlow Dashboard](./frontend/public/window.svg)
-
----
-
 ## 🚀 How It Works
 
 EquiFlow bridges the gap between Real World Assets (RWA) and DeFi through a seamless 4-step workflow:

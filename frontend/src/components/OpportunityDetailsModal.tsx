@@ -1,6 +1,15 @@
 import { useEffect } from 'react';
 
-// ... imports
+import { motion, AnimatePresence } from "framer-motion";
+import { X, FileText, Download, ShieldCheck, Clock, DollarSign } from "lucide-react";
+import { generateLegalContract } from "@/utils/legalGenerator";
+import { toast } from "react-hot-toast";
+
+interface OpportunityDetailsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  opportunity: any;
+}
 
 export default function OpportunityDetailsModal({ isOpen, onClose, opportunity }: OpportunityDetailsModalProps) {
   // Close on ESC key

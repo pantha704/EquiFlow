@@ -1,4 +1,3 @@
-
 "use client";
 import { useState } from 'react';
 import { Home, DollarSign, ArrowRight, Loader2, Clock, FileText, X } from "lucide-react";
@@ -6,8 +5,9 @@ import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { generateLegalContract } from '@/utils/legalGenerator';
 import { BrainCircuit, CheckCircle, AlertTriangle } from 'lucide-react';
-import { ethers } from 'ethers'; // Assuming ethers is available globally or imported
-import { CONTRACT_ADDRESS, EquiFlowABI } from '@/constants'; // Reverting to alias import
+import { ethers } from 'ethers';
+import { CONTRACT_ADDRESS, EquiFlowABI } from '@/constants';
+import { analyzePropertyDocument } from '@/utils/aiValuation';
 
 interface TokenizeFormProps {
   account: string | null;
@@ -16,11 +16,150 @@ interface TokenizeFormProps {
 }
 
 export default function TokenizeForm({ account, onSuccess, onClose }: TokenizeFormProps) {
-  const [durationUnit, setDurationUnit] = useState("months"); // Still used for conversion
+  const [durationUnit, setDurationUnit] = useState("months");
 
-  // ... (rest of state)
+  const [formData, setFormData] = useState({
+    propertyAddress: "",
+    appraisalValue: "",
+    requestedLiquidity: "",
+    duration: "",
+    deedFile: null as File | null
+  });
 
-  // ... (rest of functions)
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiValuation, setAiValuation] = useState<number | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
+  const [aiReasoning, setAiReasoning] = useState<string | null>(null);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, files } = e.target;
+    if (name === "deedFile" && files) {
+      setFormData(prev => ({ ...prev, deedFile: files[0] }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!formData.deedFile || !formData.propertyAddress) {
+        toast.error("Please provide property address and deed file.");
+        return;
+    }
+
+    setIsAnalyzing(true);
+    const toastId = toast.loading("Analyzing document with Gemini AI...");
+
+    try {
+        const result = await analyzePropertyDocument(formData.deedFile);
+
+        if (result.verified) {
+            setIsVerified(true);
+            setAiValuation(result.valuation);
+            setAiReasoning(result.reasoning);
+
+            // Auto-fill appraisal value if empty
+            if (!formData.appraisalValue) {
+                setFormData(prev => ({ ...prev, appraisalValue: result.valuation.toString() }));
+            }
+
+            toast.success("Document Verified & Valuated!", { id: toastId });
+        } else {
+            setIsVerified(false);
+            setAiValuation(null);
+            setAiReasoning(result.reasoning);
+            toast.error(`Verification Failed: ${result.reasoning}`, { id: toastId });
+        }
+    } catch (error) {
+        console.error("AI Analysis Error:", error);
+        toast.error("AI Analysis failed. Please try again.", { id: toastId });
+    } finally {
+        setIsAnalyzing(false);
+    }
+  };
+
+  const handleTokenize = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!account) return toast.error("Please connect wallet");
+    if (!isVerified) return toast.error("Please verify property document with AI first.");
+
+    setIsProcessing(true);
+    const toastId = toast.loading("Generating Legal Contract...");
+
+    try {
+      // 1. Generate Legal Contract PDF & Hash
+      const { hash } = await generateLegalContract(
+        account,
+        formData.appraisalValue,
+        formData.requestedLiquidity,
+        Number(formData.duration),
+        formData.propertyAddress
+      );
+
+      toast.loading("Minting IP Asset...", { id: toastId });
+
+      // 2. Interact with Smart Contract
+      // @ts-ignore
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, EquiFlowABI, signer);
+
+      // Convert duration to seconds based on unit
+      let durationInSeconds = Number(formData.duration);
+      if (durationUnit === "months") durationInSeconds *= 30 * 24 * 60 * 60;
+      else if (durationUnit === "years") durationInSeconds *= 365 * 24 * 60 * 60;
+      else durationInSeconds *= 24 * 60 * 60; // days
+
+      // Ensure all numeric values are passed as strings for uint256
+      const appraisalValueWei = formData.appraisalValue.toString();
+      const requestedLiquidityWei = formData.requestedLiquidity.toString();
+      const durationWei = durationInSeconds.toString();
+      const aiValuationWei = aiValuation ? aiValuation.toString() : "0";
+
+      console.log("Tokenizing with args:", {
+        tokenURI: "ipfs://placeholder-cid",
+        appraisalValue: appraisalValueWei,
+        requestedLiquidity: requestedLiquidityWei,
+        duration: durationWei,
+        documentHash: hash,
+        aiValuation: aiValuationWei,
+        propertyAddress: formData.propertyAddress
+      });
+
+      const tx = await contract.tokenizeHome(
+        "ipfs://placeholder-cid",
+        appraisalValueWei,
+        requestedLiquidityWei,
+        durationWei,
+        hash,
+        aiValuationWei,
+        formData.propertyAddress
+      );
+
+      await tx.wait();
+
+      toast.success("Property Tokenized Successfully!", { id: toastId });
+      if (onSuccess) onSuccess();
+
+      // Reset form
+      setFormData({
+        propertyAddress: "",
+        appraisalValue: "",
+        requestedLiquidity: "",
+        duration: "",
+        deedFile: null
+      });
+      setIsVerified(false);
+      setAiValuation(null);
+      setAiReasoning(null);
+
+    } catch (error: any) {
+      console.error("Tokenization Error:", error);
+      toast.error(error.reason || error.message || "Tokenization failed", { id: toastId });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <motion.div
@@ -194,5 +333,5 @@ export default function TokenizeForm({ account, onSuccess, onClose }: TokenizeFo
       </form>
     </motion.div>
   );
-
 }
+

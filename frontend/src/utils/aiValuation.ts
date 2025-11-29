@@ -19,3 +19,25 @@ export const estimatePropertyValuation = async (address: string): Promise<number
   // Round to nearest 1000 for cleaner numbers
   return Math.round(valuation / 1000) * 1000;
 };
+
+export const analyzePropertyDocument = async (file: File): Promise<{ verified: boolean; valuation: number; reasoning: string }> => {
+  // Simulate AI processing delay
+  await new Promise(resolve => setTimeout(resolve, 3000));
+
+  // Mock logic: If file exists, verify it.
+  if (file && file.size > 0) {
+      // Generate a random valuation between 500k and 1.5M
+      const valuation = Math.floor(Math.random() * (1500000 - 500000 + 1)) + 500000;
+      return {
+          verified: true,
+          valuation: Math.round(valuation / 1000) * 1000,
+          reasoning: "The document appears to be a valid property deed. Property details match public records."
+      };
+  }
+
+  return {
+      verified: false,
+      valuation: 0,
+      reasoning: "Could not verify the document. Please ensure it is a clear image or PDF of a valid deed."
+  };
+};

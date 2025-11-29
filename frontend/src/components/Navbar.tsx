@@ -25,8 +25,9 @@ export default function Navbar({ account, connectWallet, disconnectWallet }: Nav
   return (
     <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/50 backdrop-blur-xl">
       <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-        <Link href="/" className="text-2xl font-bold bg-clip-text text-transparent bg-linear-to-r from-purple-400 to-pink-600">
-          EquiFlow
+        <Link href="/" className="text-2xl flex justify-between gap-1.5 font-bold bg-clip-text text-transparent bg-linear-to-r from-purple-400 to-pink-600">
+          {/* <img src="favicon.ico" alt="" height={25} width={30} /> */}
+          <p>EquiFlow</p>
         </Link>
 
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 ml-4 -translate-y-1/2 hidden md:flex items-center gap-8">

@@ -168,7 +168,7 @@ export default function TokenizeForm({ account, onSuccess, onClose }: TokenizeFo
       className="glass-panel p-8 rounded-3xl max-w-md mx-auto w-full border border-white/10 relative overflow-hidden"
     >
       <div className="flex justify-between items-start mb-8">
-        <div className="flex items-center gap-3">
+        <div className="flex gap-15">
           <div className="p-3 bg-purple-500/20 rounded-xl">
             <Home className="text-purple-400 w-6 h-6" />
           </div>

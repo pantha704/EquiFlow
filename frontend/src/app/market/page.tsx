@@ -4,29 +4,17 @@ import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { toast } from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
+import { useWallet } from '@/context/WalletContext';
 import { CONTRACT_ADDRESS, EquiFlowABI } from '@/constants';
 import { AlertTriangle, CheckCircle, Clock, TrendingUp } from 'lucide-react';
 
 import OpportunityDetailsModal from '@/components/OpportunityDetailsModal';
 
 export default function MarketPage() {
-  const [account, setAccount] = useState<string | null>(null);
+  const { account } = useWallet();
   const [loans, setLoans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOpportunity, setSelectedOpportunity] = useState<any>(null);
-
-  const connectWallet = async () => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
-      try {
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
-        await provider.send("eth_requestAccounts", []);
-        const signer = await provider.getSigner();
-        setAccount(await signer.getAddress());
-      } catch (error) {
-        console.error("Connection failed", error);
-      }
-    }
-  };
 
   useEffect(() => {
     const fetchLoans = async () => {
@@ -74,17 +62,6 @@ export default function MarketPage() {
     };
 
     fetchLoans();
-
-    // Auto-connect
-    const checkConnection = async () => {
-      if (typeof window !== 'undefined' && (window as any).ethereum) {
-        const accounts = await (window as any).ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length > 0) {
-          setAccount(accounts[0]);
-        }
-      }
-    };
-    checkConnection();
   }, []);
 
   const fundLoan = async (id: number, amount: string) => {
@@ -151,7 +128,7 @@ export default function MarketPage() {
 
   return (
     <main className="min-h-screen bg-black text-white pb-20">
-      <Navbar account={account} connectWallet={connectWallet} />
+      <Navbar />
 
       <div className="container mx-auto px-6 pt-32">
         <h1 className="text-4xl font-bold mb-8 text-gradient">Investment Market</h1>

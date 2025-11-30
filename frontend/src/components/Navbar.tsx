@@ -1,22 +1,17 @@
 import { useState } from 'react';
 import Link from 'next/link';
-
+import { useWallet } from '@/context/WalletContext';
 import { ADMIN_ADDRESSES } from '@/constants';
 
-interface NavbarProps {
-  account: string | null;
-  connectWallet: () => void;
-  disconnectWallet?: () => void;
-}
-
-export default function Navbar({ account, connectWallet, disconnectWallet }: NavbarProps) {
+export default function Navbar() {
+  const { account, connectWallet, disconnectWallet } = useWallet();
   const [isHovering, setIsHovering] = useState(false);
 
   const isAdmin = account && ADMIN_ADDRESSES.map(addr => addr.toLowerCase()).includes(account.toLowerCase());
 
   const handleClick = () => {
     if (account) {
-      if (disconnectWallet) disconnectWallet();
+      disconnectWallet();
     } else {
       connectWallet();
     }
@@ -50,7 +45,7 @@ export default function Navbar({ account, connectWallet, disconnectWallet }: Nav
           onMouseLeave={() => setIsHovering(false)}
           className={`px-6 py-2.5 rounded-full border transition-all text-sm font-medium w-40 flex justify-center ${
             account
-              ? "bg-green-500/10 border-green-500/20 text-green-400 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400"
+              ? "bg-green-500/10 border-green-500/20 text-green-400 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400"
               : "bg-white/5 hover:bg-white/10 border-white/10 text-white"
           }`}
         >

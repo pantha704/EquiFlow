@@ -1,6 +1,6 @@
 "use client";
 import { useState } from 'react';
-import { Home, DollarSign, ArrowRight, Loader2, Clock, FileText, X } from "lucide-react";
+import { Home, DollarSign, ArrowRight, Loader2, Clock, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { generateLegalContract } from '@/utils/legalGenerator';
@@ -9,13 +9,15 @@ import { ethers } from 'ethers';
 import { CONTRACT_ADDRESS, EquiFlowABI } from '@/constants';
 import { analyzePropertyDocument } from '@/utils/aiValuation';
 
+import { useWallet } from '@/context/WalletContext';
+
 interface TokenizeFormProps {
-  account: string | null;
   onSuccess?: () => void;
   onClose?: () => void;
 }
 
-export default function TokenizeForm({ account, onSuccess, onClose }: TokenizeFormProps) {
+export default function TokenizeForm({ onSuccess, onClose }: TokenizeFormProps) {
+  const { account } = useWallet();
   const [durationUnit, setDurationUnit] = useState("months");
 
   const [formData, setFormData] = useState({

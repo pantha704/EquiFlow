@@ -3,28 +3,23 @@ import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { toast } from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
+import { useWallet } from '@/context/WalletContext';
 import { CONTRACT_ADDRESS, EquiFlowABI } from '@/constants';
 import TokenizeForm from '@/components/TokenizeForm';
 import OpportunityDetailsModal from '@/components/OpportunityDetailsModal';
 
 export default function DashboardPage() {
-  const [account, setAccount] = useState<string | null>(null);
+  const { account } = useWallet();
   const [myProperties, setMyProperties] = useState<any[]>([]);
   const [myInvestments, setMyInvestments] = useState<any[]>([]);
   const [showTokenizeModal, setShowTokenizeModal] = useState(false);
+  const [currentTime, setCurrentTime] = useState(Date.now() / 1000);
 
-  const connectWallet = async () => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
-      try {
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
-        await provider.send("eth_requestAccounts", []);
-        const signer = await provider.getSigner();
-        setAccount(await signer.getAddress());
-      } catch (error) {
-        console.error("Connection failed", error);
-      }
-    }
-  };
+  useEffect(() => {
+    setCurrentTime(Date.now() / 1000);
+    const interval = setInterval(() => setCurrentTime(Date.now() / 1000), 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchData = async () => {
     if (account && typeof window !== 'undefined' && (window as any).ethereum) {
@@ -74,19 +69,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (account) fetchData();
   }, [account]);
-
-  // Auto-connect effect
-  useEffect(() => {
-    const checkConnection = async () => {
-      if (typeof window !== 'undefined' && (window as any).ethereum) {
-        const accounts = await (window as any).ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length > 0) {
-          setAccount(accounts[0]);
-        }
-      }
-    };
-    checkConnection();
-  }, []);
 
   const handleTokenizeSuccess = () => {
     setShowTokenizeModal(false);
@@ -162,7 +144,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-black text-white pb-20">
-      <Navbar account={account} connectWallet={connectWallet} />
+      <Navbar />
 
       <div className="container mx-auto px-6 pt-32">
 
@@ -207,7 +189,7 @@ export default function DashboardPage() {
                   {prop.isFunded && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Deadline</span>
-                      <span className={Date.now() / 1000 > prop.deadline && !prop.isRepaid ? "text-red-500 font-bold" : ""}>
+                      <span className={currentTime > prop.deadline && !prop.isRepaid ? "text-red-500 font-bold" : ""}>
                         {new Date(prop.deadline * 1000).toLocaleDateString()}
                       </span>
                     </div>
@@ -258,20 +240,20 @@ export default function DashboardPage() {
                   <div className="space-y-2 mb-6">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Deadline</span>
-                      <span className={Date.now() / 1000 > prop.deadline && !prop.isRepaid ? "text-red-500 font-bold" : ""}>
+                      <span className={currentTime > prop.deadline && !prop.isRepaid ? "text-red-500 font-bold" : ""}>
                         {new Date(prop.deadline * 1000).toLocaleDateString()}
                       </span>
                     </div>
                   </div>
 
                   <div className="relative z-20 mt-auto" onClick={(e) => e.stopPropagation()}>
-                    {!prop.isRepaid && Date.now() / 1000 > prop.deadline && (
+                    {!prop.isRepaid && currentTime > prop.deadline && (
                       <button onClick={() => forecloseLoan(prop.id)} className="w-full py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors font-bold animate-pulse">
                         ⚠️ FORECLOSE PROPERTY
                       </button>
                     )}
 
-                    {!prop.isRepaid && Date.now() / 1000 <= prop.deadline && (
+                    {!prop.isRepaid && currentTime <= prop.deadline && (
                       <div className="w-full py-2 text-center text-gray-500 text-sm italic">
                         Waiting for repayment...
                       </div>
@@ -290,7 +272,6 @@ export default function DashboardPage() {
           <div className="min-h-screen px-4 text-center flex items-center justify-center">
             <div className="relative w-full max-w-md my-8">
               <TokenizeForm
-                account={account}
                 onSuccess={handleTokenizeSuccess}
                 onClose={() => setShowTokenizeModal(false)}
               />

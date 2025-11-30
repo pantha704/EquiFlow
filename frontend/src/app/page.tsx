@@ -1,7 +1,6 @@
 "use client";
 // Force rebuild
-import { useEffect, useRef, useState } from 'react';
-import { ethers } from 'ethers';
+import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Link from 'next/link';
@@ -13,30 +12,8 @@ gsap.registerPlugin(ScrollTrigger);
 export default function LandingPage() {
   const heroRef = useRef(null);
   const featuresRef = useRef(null);
-  const [account, setAccount] = useState<string | null>(null);
-
-  const connectWallet = async () => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
-      try {
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
-        await provider.send("eth_requestAccounts", []);
-        const signer = await provider.getSigner();
-        setAccount(await signer.getAddress());
-      } catch (error) {
-        console.error("Connection failed", error);
-      }
-    } else {
-      alert("Please install MetaMask!");
-    }
-  };
-
-  const disconnectWallet = () => {
-    setAccount(null);
-  };
 
   useEffect(() => {
-    // Check if already connected
-
     const ctx = gsap.context(() => {
       // Hero Animation
       gsap.from(".hero-text", {
@@ -60,27 +37,12 @@ export default function LandingPage() {
       });
     });
 
-    // Auto-connect wallet
-    const checkConnection = async () => {
-      if (typeof window !== 'undefined' && (window as any).ethereum) {
-        try {
-          const accounts = await (window as any).ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) {
-            setAccount(accounts[0]);
-          }
-        } catch (err) {
-          console.error("Auto-connect failed", err);
-        }
-      }
-    };
-    checkConnection();
-
     return () => ctx.revert();
   }, []);
 
   return (
     <main className="min-h-screen bg-black text-white overflow-x-hidden">
-      <Navbar account={account} connectWallet={connectWallet} disconnectWallet={disconnectWallet} />
+      <Navbar />
 
       {/* Hero Section */}
       <section ref={heroRef} className="relative min-h-screen flex items-center justify-center pt-20">

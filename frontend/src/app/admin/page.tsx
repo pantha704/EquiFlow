@@ -3,44 +3,38 @@ import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { toast } from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
+import { useWallet } from '@/context/WalletContext';
 import { CONTRACT_ADDRESS, EquiFlowABI } from '@/constants';
 import { CheckCircle, ShieldCheck, AlertCircle } from 'lucide-react';
 
 import { generateLegalContract } from '@/utils/legalGenerator';
 
 export default function AdminPage() {
-  const [account, setAccount] = useState<string | null>(null);
+  const { account } = useWallet();
   const [pendingListings, setPendingListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
 
-  const connectWallet = async () => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
-      try {
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
-        await provider.send("eth_requestAccounts", []);
-        const signer = await provider.getSigner();
-        const userAddress = await signer.getAddress();
-        setAccount(userAddress);
-
-        // Check ownership
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, EquiFlowABI, provider);
+  useEffect(() => {
+    const checkOwner = async () => {
+      if (account && typeof window !== 'undefined' && (window as any).ethereum) {
         try {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const contract = new ethers.Contract(CONTRACT_ADDRESS, EquiFlowABI, provider);
           const owner = await contract.owner();
-          if (owner.toLowerCase() === userAddress.toLowerCase()) {
+          if (owner.toLowerCase() === account.toLowerCase()) {
             setIsOwner(true);
           } else {
             console.warn("User is not the contract owner");
+            setIsOwner(false);
           }
         } catch (e) {
           console.error("Failed to fetch owner", e);
         }
-
-      } catch (error) {
-        console.error("Connection failed", error);
       }
-    }
-  };
+    };
+    checkOwner();
+  }, [account]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -135,7 +129,7 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen bg-black text-white pb-20">
-      <Navbar account={account} connectWallet={connectWallet} />
+      <Navbar />
 
       <div className="container mx-auto px-6 pt-32">
         <div className="flex items-center gap-4 mb-12">

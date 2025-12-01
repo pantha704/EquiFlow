@@ -7,7 +7,7 @@ import { generateLegalContract } from '@/utils/legalGenerator';
 import { BrainCircuit, CheckCircle, AlertTriangle } from 'lucide-react';
 import { ethers } from 'ethers';
 import { CONTRACT_ADDRESS, EquiFlowABI } from '@/constants';
-import { analyzePropertyDocument } from '@/utils/aiValuation';
+import { verifyDocumentAction } from '@/actions/verifyDocument';
 
 import { useWallet } from '@/context/WalletContext';
 
@@ -53,7 +53,10 @@ export default function TokenizeForm({ onSuccess, onClose }: TokenizeFormProps) 
     const toastId = toast.loading("Analyzing document with Gemini AI...");
 
     try {
-        const result = await analyzePropertyDocument(formData.deedFile);
+        const data = new FormData();
+        data.append("file", formData.deedFile);
+
+        const result = await verifyDocumentAction(data);
 
         if (result.verified) {
             setIsVerified(true);
@@ -113,10 +116,10 @@ export default function TokenizeForm({ onSuccess, onClose }: TokenizeFormProps) 
       else durationInSeconds *= 24 * 60 * 60; // days
 
       // Ensure all numeric values are passed as strings for uint256
-      const appraisalValueWei = formData.appraisalValue.toString();
-      const requestedLiquidityWei = formData.requestedLiquidity.toString();
+      const appraisalValueWei = ethers.parseEther(formData.appraisalValue.toString());
+      const requestedLiquidityWei = ethers.parseEther(formData.requestedLiquidity.toString());
       const durationWei = durationInSeconds.toString();
-      const aiValuationWei = aiValuation ? aiValuation.toString() : "0";
+      const aiValuationWei = aiValuation ? ethers.parseEther(aiValuation.toString()) : "0";
 
       console.log("Tokenizing with args:", {
         tokenURI: "ipfs://placeholder-cid",
@@ -140,7 +143,20 @@ export default function TokenizeForm({ onSuccess, onClose }: TokenizeFormProps) 
 
       await tx.wait();
 
-      toast.success("Property Tokenized Successfully!", { id: toastId });
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <span>Property Tokenized Successfully!</span>
+          <a
+            href={`https://aeneid.storyscan.io/tx/${tx.hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-purple-300 hover:text-purple-200 underline flex items-center gap-1"
+          >
+            View on Explorer <ArrowRight className="w-3 h-3" />
+          </a>
+        </div>,
+        { id: toastId, duration: 5000 }
+      );
       if (onSuccess) onSuccess();
 
       // Reset form

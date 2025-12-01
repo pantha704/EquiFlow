@@ -5,7 +5,7 @@ import { ethers } from 'ethers';
 import { toast } from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
 import { useWallet } from '@/context/WalletContext';
-import { CONTRACT_ADDRESS, EquiFlowABI } from '@/constants';
+import { CONTRACT_ADDRESS, EquiFlowABI, RPC_URL } from '@/constants';
 import { AlertTriangle, CheckCircle, Clock, TrendingUp } from 'lucide-react';
 
 import OpportunityDetailsModal from '@/components/OpportunityDetailsModal';
@@ -18,46 +18,50 @@ export default function MarketPage() {
 
   useEffect(() => {
     const fetchLoans = async () => {
+      let provider;
       if (typeof window !== 'undefined' && (window as any).ethereum) {
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, EquiFlowABI, provider);
+        provider = new ethers.BrowserProvider((window as any).ethereum);
+      } else {
+        provider = new ethers.JsonRpcProvider(RPC_URL);
+      }
 
-        try {
-          const nextId = await contract.nextTokenId();
-          const fetchedLoans = [];
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, EquiFlowABI, provider);
 
-          for (let i = 0; i < Number(nextId); i++) {
-            const loan = await contract.loans(i);
-            // loan structure: [homeowner, appraisalValue, requestedLiquidity, ipId, isFunded, equityShareBps, duration, deadline, isVerified, aiValuation]
-            // Check if not funded AND verified
-            if (!loan.isFunded && loan.isVerified && loan.homeowner !== ethers.ZeroAddress) {
-              const appraisal = ethers.formatEther(loan.appraisalValue);
-              const liquidity = ethers.formatEther(loan.requestedLiquidity);
-              const aiVal = ethers.formatEther(loan.aiValuation);
+      try {
+        const nextId = await contract.nextTokenId();
+        const fetchedLoans = [];
 
-              const isHighRisk = Number(liquidity) > Number(aiVal);
+        for (let i = 0; i < Number(nextId); i++) {
+          const loan = await contract.loans(i);
+          // loan structure: [homeowner, appraisalValue, requestedLiquidity, ipId, isFunded, equityShareBps, duration, deadline, isVerified, aiValuation]
+          // Check if not funded AND verified
+          if (!loan.isFunded && loan.isVerified && loan.homeowner !== ethers.ZeroAddress) {
+            const appraisal = ethers.formatEther(loan.appraisalValue);
+            const liquidity = ethers.formatEther(loan.requestedLiquidity);
+            const aiVal = ethers.formatEther(loan.aiValuation);
 
-              fetchedLoans.push({
-                id: i,
-                homeowner: loan.homeowner, // Ensure homeowner is passed
-                appraisal: appraisal,
-                liquidity: liquidity,
-                duration: Number(loan.duration) / 86400, // days
-                propertyAddress: loan.propertyAddress, // Fetch property address
-                isHighRisk: isHighRisk,
-                aiValuation: aiVal,
-                isFunded: loan.isFunded,
-                isRepaid: loan.isRepaid,
-                investor: loan.investor
-              });
-            }
+            const isHighRisk = Number(liquidity) > Number(aiVal);
+
+            fetchedLoans.push({
+              id: i,
+              homeowner: loan.homeowner, // Ensure homeowner is passed
+              appraisal: appraisal,
+              liquidity: liquidity,
+              duration: Number(loan.duration) / 86400, // days
+              propertyAddress: loan.propertyAddress, // Fetch property address
+              isHighRisk: isHighRisk,
+              aiValuation: aiVal,
+              isFunded: loan.isFunded,
+              isRepaid: loan.isRepaid,
+              investor: loan.investor
+            });
           }
-          setLoans(fetchedLoans);
-        } catch (err) {
-          console.error("Error fetching loans:", err);
-        } finally {
-          setLoading(false);
         }
+        setLoans(fetchedLoans);
+      } catch (err) {
+        console.error("Error fetching loans:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -141,7 +145,7 @@ export default function MarketPage() {
               <div
                 key={loan.id}
                 onClick={() => setSelectedOpportunity(loan)}
-                className="glass-panel p-6 rounded-2xl border border-white/10 relative overflow-hidden group hover:border-purple-500/30 transition-all cursor-pointer"
+                className="glass-panel p-6 rounded-2xl border border-white/10 relative overflow-hidden group hover:border-purple-500/30 transition-all cursor-pointer flex flex-col h-full"
               >
                 {loan.isHighRisk && (
                   <div className="absolute top-0 right-0 bg-red-500/20 text-red-400 text-xs font-bold px-3 py-1 rounded-bl-xl border-l border-b border-red-500/20 flex items-center gap-1 z-20">
@@ -158,8 +162,16 @@ export default function MarketPage() {
                   </span>
                 </div>
 
-                <h3 className="text-2xl font-bold mb-2 group-hover:text-purple-400 transition-colors">{loan.liquidity} IP</h3>
-                <p className="text-gray-400 text-sm mb-6">Requested Liquidity</p>
+                <div className="flex justify-between items-end mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold mb-1 group-hover:text-purple-400 transition-colors">{loan.liquidity} IP</h3>
+                    <p className="text-gray-400 text-sm">Requested Liquidity</p>
+                  </div>
+                  <div className="text-right max-w-[50%]">
+                    <p className="text-sm font-medium text-white truncate" title={loan.propertyAddress}>{loan.propertyAddress}</p>
+                    <p className="text-xs text-gray-500">Location</p>
+                  </div>
+                </div>
 
                 <div className="space-y-4 relative z-10 mb-8">
                   <div className="flex justify-between text-sm">
@@ -182,7 +194,7 @@ export default function MarketPage() {
                     e.stopPropagation();
                     fundLoan(loan.id, loan.liquidity);
                   }}
-                  className="w-full btn-primary relative z-20"
+                  className="w-full btn-primary relative z-20 mt-auto"
                 >
                   Fund Loan
                 </button>

@@ -1,4 +1,5 @@
 export const CONTRACT_ADDRESS = "0xA9565855148F3a0F232726aF23bdF4d0C8fa2325";
+export const RPC_URL = "https://aeneid.storyrpc.io"; // Story Protocol Aeneid Testnet RPC
 
 export const ADMIN_ADDRESSES = [
   "0xEC2A43214A1fB59a2851cfcE088CDC1F4e4C70Cd", // Primary Admin

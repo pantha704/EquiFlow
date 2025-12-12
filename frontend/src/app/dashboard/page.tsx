@@ -33,6 +33,16 @@ export default function DashboardPage() {
 
         for (let i = 0; i < Number(nextId); i++) {
           const loan = await contract.loans(i);
+          if (loan[0] === ethers.ZeroAddress) continue; // Skip cancelled/deleted loans
+
+          let owner = ethers.ZeroAddress;
+          try {
+            owner = await contract.ownerOf(i);
+          } catch (e) {
+            console.log(`Token ${i} likely burned or invalid`);
+            continue;
+          }
+
           // Struct: 0:homeowner, 1:appraisal, 2:liquidity, 3:ipId, 4:isFunded, 5:equity, 6:duration, 7:deadline, 8:verified, 9:hash, 10:aiVal, 11:investor, 12:isRepaid, 13:propertyAddress
 
           const item = {
@@ -45,7 +55,8 @@ export default function DashboardPage() {
             duration: Number(loan[6]) / 86400, // Convert seconds to days
             investor: loan[11],
             isRepaid: loan[12],
-            propertyAddress: loan[13] // Fetch property address
+            propertyAddress: loan[13], // Fetch property address
+            owner: owner
           };
 
           // My Properties (Homeowner)
@@ -203,10 +214,16 @@ export default function DashboardPage() {
                     </button>
                   )}
 
-                  {prop.isFunded && !prop.isRepaid && (
+                  {prop.isFunded && !prop.isRepaid && prop.owner.toLowerCase() === CONTRACT_ADDRESS.toLowerCase() && (
                     <button onClick={() => repayLoan(prop.id, prop.liquidity)} className="w-full py-2 rounded-xl bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors border border-green-500/30 font-bold">
                       Repay Loan ({prop.liquidity} IP)
                     </button>
+                  )}
+
+                  {prop.isFunded && !prop.isRepaid && prop.owner.toLowerCase() !== CONTRACT_ADDRESS.toLowerCase() && (
+                    <div className="w-full py-2 text-center text-red-500 text-sm font-bold border border-red-500/50 rounded-xl bg-red-500/10">
+                      PROPERTY LOST (FORECLOSED)
+                    </div>
                   )}
                 </div>
               </div>
@@ -247,7 +264,13 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="relative z-20 mt-auto" onClick={(e) => e.stopPropagation()}>
-                    {!prop.isRepaid && currentTime > prop.deadline && (
+                    {!prop.isRepaid && account && prop.owner.toLowerCase() === account.toLowerCase() && (
+                         <div className="w-full py-2 text-center text-red-500 text-sm font-bold border border-red-500/50 rounded-xl bg-red-500/10">
+                           PROPERTY SEIZED
+                         </div>
+                    )}
+
+                    {!prop.isRepaid && account && prop.owner.toLowerCase() !== account.toLowerCase() && currentTime > prop.deadline && (
                       <button onClick={() => forecloseLoan(prop.id)} className="w-full py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors font-bold animate-pulse">
                         ⚠️ FORECLOSE PROPERTY
                       </button>

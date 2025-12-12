@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
     const base64Data = buffer.toString("base64");
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
       You are an expert Real Estate Appraiser AI.

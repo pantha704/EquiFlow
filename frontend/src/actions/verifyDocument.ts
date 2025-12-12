@@ -44,7 +44,7 @@ export async function verifyDocumentAction(formData: FormData) {
     const deterministicValuation = Number((hashInt % range) + BigInt(minVal));
     const roundedValuation = Math.round(deterministicValuation / 1000) * 1000;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
       You are a strict AI auditor for a Real Estate Tokenization platform.

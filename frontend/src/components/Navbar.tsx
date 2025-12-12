@@ -26,15 +26,18 @@ export default function Navbar() {
         </Link>
 
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 ml-4 -translate-y-1/2 hidden md:flex items-center gap-8">
-          <Link href="/market" className="text-sm text-gray-300 hover:text-white transition-colors">
+          <Link href="/market" className="group relative text-sm text-gray-300 hover:text-white transition-colors">
             Market
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-linear-to-r from-purple-400 to-pink-600 transition-all duration-300 group-hover:w-full"></span>
           </Link>
-          <Link href="/dashboard" className="text-sm text-gray-300 hover:text-white transition-colors">
+          <Link href="/dashboard" className="group relative text-sm text-gray-300 hover:text-white transition-colors">
             Dashboard
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-linear-to-r from-purple-400 to-pink-600 transition-all duration-300 group-hover:w-full"></span>
           </Link>
           {isAdmin && (
-            <Link href="/admin" className="text-sm text-gray-300 hover:text-white transition-colors">
+            <Link href="/admin" className="group relative text-sm text-gray-300 hover:text-white transition-colors">
               Admin
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-linear-to-r from-purple-400 to-pink-600 transition-all duration-300 group-hover:w-full"></span>
             </Link>
           )}
         </div>

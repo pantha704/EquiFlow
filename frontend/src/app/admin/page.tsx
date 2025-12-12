@@ -204,18 +204,57 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => verifyListing(prop.id)}
-                  disabled={!isOwner}
-                  className={`w-full py-3 rounded-xl font-bold transition-all shadow-lg relative z-10 flex items-center justify-center gap-2 ${
-                    isOwner
-                      ? "bg-blue-500 hover:bg-blue-600 text-white shadow-blue-500/20"
-                      : "bg-gray-700 text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  <CheckCircle className="w-5 h-5" />
-                  {isOwner ? "Verify Listing" : "Admin Only"}
-                </button>
+                <div className="flex gap-4 relative z-10 mt-auto">
+                  <button
+                    onClick={() => verifyListing(prop.id)}
+                    disabled={!isOwner}
+                    className={`flex-1 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 ${
+                      isOwner
+                        ? "bg-blue-500 hover:bg-blue-600 text-white shadow-blue-500/20"
+                        : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    {isOwner ? "Verify" : "Auth"}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                        if(!isOwner) return toast.error("Only the contract owner can reject listings");
+                        const confirm = window.confirm("Are you sure you want to reject this listing? This action cannot be undone.");
+                        if (confirm) {
+                            const rejectListing = async () => {
+                                try {
+                                    const provider = new ethers.BrowserProvider((window as any).ethereum);
+                                    const signer = await provider.getSigner();
+                                    const contract = new ethers.Contract(CONTRACT_ADDRESS, EquiFlowABI, signer);
+
+                                    console.log(`Rejecting listing ${prop.id}...`);
+                                    const tx = await contract.cancelListing(prop.id);
+                                    const toastId = toast.loading("Rejecting Listing...");
+                                    await tx.wait();
+
+                                    toast.success("Listing Rejected", { id: toastId });
+                                    setTimeout(() => window.location.reload(), 2000);
+                                } catch (err: any) {
+                                    console.error(err);
+                                    toast.error("Rejection failed: " + (err.reason || err.message || "Unknown error"));
+                                }
+                            };
+                            rejectListing();
+                        }
+                    }}
+                    disabled={!isOwner}
+                    className={`flex-1 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 ${
+                      isOwner
+                        ? "bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50"
+                        : "bg-gray-700 text-gray-400 cursor-not-allowed border border-transparent"
+                    }`}
+                  >
+                    <AlertCircle className="w-5 h-5" />
+                    Reject
+                  </button>
+                </div>
               </div>
             ))}
           </div>
